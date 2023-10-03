@@ -6,11 +6,12 @@ authors = ["Mathias Aas <mathias.aas123@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "3.10.x"
+python = "3.11.x"
 numpy = "^1.26.0"
 pandas = "^2.1.1"
 pyarrow = "^13.0.0"
 matplotlib = "^3.8.0"
+torch = "^2.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
