@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "project"
+version = "0.1.0"
+description = "Project"
+authors = ["Mathias Aas <mathias.aas123@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "3.10.x"
+numpy = "^1.26.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
