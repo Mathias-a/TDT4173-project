@@ -8,7 +8,13 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "3.10.x"
 numpy = "^1.26.0"
+pandas = "^2.1.1"
+pyarrow = "^13.0.0"
+matplotlib = "^3.8.0"
 
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.25.2"
 
 [build-system]
 requires = ["poetry-core"]
