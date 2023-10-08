@@ -9,5 +9,5 @@ def print_column_names_with_pyarrow(parquet_file_path):
         print(column)
 
 # Usage
-file_path = "data-2/A/X_test_estimated.parquet"
+file_path = "data-2/A/train_targets.parquet"
 print_column_names_with_pyarrow(file_path)
