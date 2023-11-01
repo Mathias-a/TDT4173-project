@@ -4,7 +4,8 @@ import numpy as np
 import xgboost as xgb
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+
 
 # %% [markdown]
 # # Hyperparameters
@@ -36,39 +37,42 @@ COLUMNS_TO_KEEP = [
     "wind_speed_v_10m:ms",
     "dew_point_2m:K",
     "wind_speed_u_10m:ms",
-    't_1000hPa:K',
-    'absolute_humidity_2m:gm3',
-    'snow_water:kgm2',
-    'relative_humidity_1000hPa:p',
-    'fresh_snow_24h:cm',
-    'cloud_base_agl:m',
-    'fresh_snow_12h:cm',
-    'snow_depth:cm',
-    'dew_or_rime:idx',
-    'fresh_snow_6h:cm',
-    'super_cooled_liquid_water:kgm2',
-    'fresh_snow_3h:cm',
-    'rain_water:kgm2',
-    'precip_type_5min:idx',
-    'precip_5min:mm',
-    'fresh_snow_1h:cm',
-    'sun_azimuth:d',
-    'msl_pressure:hPa',
-    'pressure_100m:hPa',
-    'pressure_50m:hPa',
-    'sfc_pressure:hPa',
-    'prob_rime:p',
-    'wind_speed_10m:ms',
-    'elevation:m',
-    'snow_density:kgm3',
-    'snow_drift:idx',
-    'snow_melt_10min:mm',
-    'wind_speed_w_1000hPa:ms',
+    "t_1000hPa:K",
+    "absolute_humidity_2m:gm3",
+     "snow_water:kgm2",
+    "relative_humidity_1000hPa:p",
+    "fresh_snow_24h:cm",
+    "cloud_base_agl:m",
+    "fresh_snow_12h:cm",
+    "snow_depth:cm",
+    "dew_or_rime:idx",
+    "fresh_snow_6h:cm",
+    "super_cooled_liquid_water:kgm2",
+    "fresh_snow_3h:cm",
+    "rain_water:kgm2",
+    "precip_type_5min:idx",
+    "precip_5min:mm",
+    "fresh_snow_1h:cm",
+    "sun_azimuth:d",
+    "msl_pressure:hPa",
+    "pressure_100m:hPa",
+    "pressure_50m:hPa",
+    "sfc_pressure:hPa",
+    "prob_rime:p",
+    "wind_speed_10m:ms",
+    "elevation:m",
+    "snow_density:kgm3",
+    "snow_drift:idx",
+    "snow_melt_10min:mm",
+    "wind_speed_w_1000hPa:ms",
     # "date_calc",
     "pv_measurement",
 ] + CUSTOM_COLUMNS_TO_KEEP
 
 LOCATION = "A"
+lag_features = ["pv_measurement", "direct_rad:W"]
+SHIFTS = [1, 2, 3, 24]
+MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %% [markdown]
 # # Load Data
@@ -80,10 +84,14 @@ df_estimated = pd.read_parquet(f"data/{LOCATION}/X_train_estimated.parquet")
 df_target = pd.read_parquet(f"data/{LOCATION}/train_targets.parquet")
 
 # 2. Combine observed and estimated datasets
-df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(by="date_forecast")
+df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(
+    by="date_forecast"
+)
 
 # 3. Merge with target data
-df_merged = pd.merge(df_combined, df_target, left_on="date_forecast", right_on="time", how="inner")
+df_merged = pd.merge(
+    df_combined, df_target, left_on="date_forecast", right_on="time", how="inner"
+)
 
 # %% [markdown]
 # # Downsampling and Feature Engineering
@@ -98,15 +106,67 @@ df_merged = df_merged[COLUMNS_TO_KEEP]
 # 4. Extract features and target
 df_merged = df_merged.dropna(subset=["pv_measurement"])
 df_merged.fillna(0, inplace=True)  # Fill NaN values
-y = df_merged["pv_measurement"]
-X = df_merged.drop("pv_measurement", axis=1)
+
+# %% [markdown]
+# # Add lagged features
+
+
+# %%
+def add_lagged_features(df, features, shift):
+    """
+    This function takes in a dataframe, a list of features, and a shift interval.
+    It returns the dataframe with the lagged features added.
+    """
+    for feature in features:
+        if feature != "pv_measurement":
+            df[f"{feature}_lagged_{shift}h"] = df[feature].shift(shift)
+    return df
+
+
+for shift in SHIFTS:
+    df_merged = add_lagged_features(df_merged, COLUMNS_TO_KEEP, shift)
+
+# Remember to drop NaN values introduced by shifting
+df_merged.dropna(inplace=True)
+
+
+# %% [markdown]
+# # Remove outliers
+
+
+# %%
+# Remove outliers
+def remove_outliers(df):
+    """
+    Removes outliers in a dataframe based on IQR for each column.
+
+    Parameters:
+    - df (DataFrame): input dataframe
+
+    Returns:
+    - DataFrame: dataframe with outliers removed
+    """
+    Q1 = df.quantile(0.05)
+    Q3 = df.quantile(0.95)
+    IQR = Q3 - Q1
+    outlier_condition = ~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR)))
+    return df[outlier_condition].dropna()
+
+
+# Remove outliers from the merged dataset
+# df_merged = remove_outliers(df_merged)
+
 
 # %% [markdown]
 # # Split Data into Train and Validation
 
 # %%
 # Split data
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=False)
+y = df_merged["pv_measurement"]
+X = df_merged.drop("pv_measurement", axis=1)
+X_train, X_val, y_train, y_val = train_test_split(
+    X, y, test_size=0.2, random_state=42, shuffle=False
+)
 
 # %% [markdown]
 # # Baseline model
@@ -141,45 +201,224 @@ print(f"Baseline MAE: {baseline_mae}")
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dval = xgb.DMatrix(X_val, label=y_val)
 
-# Define XGBoost parameters
+# Modified XGBoost parameters to prevent overfitting
 xgb_params = {
-    'objective': 'reg:squarederror',
-    'eval_metric': 'mae',
-    'eta': 0.1,
-    'max_depth': 6,
-    'subsample': 0.7,
-    'colsample_bytree': 0.8,
-    'min_child_weight': 5
+    "objective": "reg:squarederror",
+    "eval_metric": "mae",
+    "eta": 0.0005,  # Reduced learning rate
+    "max_depth": 7,  # Reduced tree depth
+    "subsample": 0.7,  # Reduced subsampling
+    "colsample_bytree": 0.8,  # Reduced column sampling
+    "min_child_weight": 7,  # Increased min_child_weight
+    "alpha": 0.4,  # L1 regularization
+    "lambda": 1,  # L2 regularization
 }
 
-# Train XGBoost model
-num_rounds = 1000
+# Train XGBoost model with modifications
+num_rounds = 50000  # Increased boosting rounds due to reduced eta
 xgb_model = xgb.train(
     params=xgb_params,
     dtrain=dtrain,
     num_boost_round=num_rounds,
-    evals=[(dtrain, 'train'), (dval, 'eval')],
-    early_stopping_rounds=50,
-    verbose_eval=10
+    evals=[(dtrain, "train"), (dval, "eval")],
+    early_stopping_rounds=200,  # Increased early stopping rounds
+    verbose_eval=10,
 )
+xgb_model.save_model(MODEL_FILENAME)
+
 
 # %% [markdown]
 # # XGBoost Prediction and Evaluation
 
 # %%
 
+xgb_loaded_model = xgb.Booster()
+xgb_loaded_model.load_model(MODEL_FILENAME)
+
 # Predict with XGBoost
-y_pred_xgb = xgb_model.predict(dval, iteration_range=(0, xgb_model.best_iteration + 1))
+y_pred_xgb = xgb_loaded_model.predict(dval, iteration_range=(0, xgb_loaded_model.best_iteration + 1))
 
 # Calculate MAE for XGBoost
 xgb_mae = np.mean(np.abs(y_pred_xgb - y_val))
 print(f"XGBoost MAE: {xgb_mae}")
 
-xgb.plot_importance(xgb_model)
+# Plot the actual vs predicted values
+plt.figure(figsize=(12, 6))
+plt.plot(y_val.reset_index(drop=True), label="Actual", color='blue')
+plt.plot(y_pred_xgb, label="Predicted", color='red')
+plt.title("XGBoost Predictions vs Actuals")
+plt.legend()
+plt.show()
+
+xgb.plot_importance(xgb_loaded_model)
 plt.show()
 
 
+# %% [markdown]
+# # Predict on test set
 
+
+# %%
+
+
+
+# %% [markdown]
+# # XGBoost finding opptimal hyperparameters
+
+
+# %%
+def preprocess_test_data(df, columns_to_keep, shifts):
+    # Ensure 'pv_measurement' is not in columns_to_keep for test data processing
+    if 'pv_measurement' in columns_to_keep:
+        columns_to_keep.remove('pv_measurement')
+
+    # Ensure the index is a datetime
+    df['date_forecast'] = pd.to_datetime(df['date_forecast'])
+    df.set_index('date_forecast', inplace=True)
+    # Resample to 1-hour intervals
+    df = df.resample('1H').mean()
+    df = df.dropna(how='all').reset_index(drop=True)
+    # Keep only the columns used during training (minus the target column)
+    df = df[columns_to_keep]
+    # Add lagged features
+    for shift in shifts:
+        df = add_lagged_features(df, columns_to_keep, shift)
+    # Drop NaN values introduced by shifting
+    df.dropna(inplace=True)
+    # Return processed dataframe
+    return df
+
+
+
+# Read the Kaggle test.csv to get the location and ids
+df_submission = pd.read_csv("data/test.csv")
+
+locations = ["A", "B", "C"]
+
+# Create a list to store our final predictions and IDs
+final_predictions = []
+final_ids = []
+
+for loc in locations:
+    print(f"Processing location: {loc}")
+    # Load forecasted weather data for testing for the current location
+    df_loc = pd.read_parquet(f"data/{loc}/X_test_estimated.parquet")
+    df_loc_processed = preprocess_test_data(df_loc, COLUMNS_TO_KEEP, SHIFTS)
+    # Convert data to DMatrix for XGBoost
+    dtest = xgb.DMatrix(df_loc_processed)
+    # Predict using XGBoost model
+    preds = xgb_model.predict(dtest, iteration_range=(0, xgb_model.best_iteration + 1))
+    final_predictions.extend(preds)
+    final_ids.extend(df_submission[df_submission["location"] == loc]["id"].values)
+
+# Create a DataFrame for the final predictions and save to CSV
+df_final_submission = pd.DataFrame({
+    "id": final_ids,
+    "prediction": final_predictions
+})
+
+# Save the results to a new submission file
+df_final_submission.to_csv("xgboost_kaggle_submission.csv", index=False)
+
+
+# %%
+# Define the hyperparameter space
+def optimize_xgb():
+    param_grid = {
+        "objective": ["reg:squarederror"],
+        "eval_metric": ["mae"],
+        "eta": [
+            0.001,  # Best value I
+            0.005,
+            0.01,
+            # 0.05,
+            # 0.1,
+            # 0.3,
+        ],
+        "max_depth": [
+            # 3,
+            # 4,
+            # 5,
+            6,
+            7,  # Best value II
+            8,
+            # 9,
+            # 10,
+            # 12,
+        ],
+        "subsample": [
+            # 0.3,
+            # 0.4,
+            # 0.5,
+            # 0.6,
+            0.7,  # Best value II
+            0.8,  # Best value II
+            0.9,
+            # 1.0,
+        ],
+        "colsample_bytree": [
+            # 0.3,
+            # 0.4,
+            # 0.5,
+            # 0.6,
+            0.7,
+            0.8,  # Best value II
+            0.9,  # Best value II
+            # 1.0,
+        ],
+        "min_child_weight": [
+            # 1,
+            # 2,
+            # 3,
+            # 4,
+            # 5,
+            6,
+            7,  # Best value III
+            8,  # Best value I
+            # 9,
+            # 10,
+            # 11,
+            # 12,
+        ],
+    }
+
+    # Initialize XGBoost Regressor
+    xgb_optimization_model = xgb.XGBModel(
+        learning_rate=0.02,
+        n_estimators=600,
+        objective="reg:squarederror",
+        silent=True,
+        nthread=1,
+    )
+
+    # Initialize GridSearchCV
+    grid_search = GridSearchCV(
+        xgb_optimization_model,
+        param_grid=param_grid,
+        scoring="neg_mean_absolute_error",
+        cv=None,
+        verbose=0,  # make it silent
+        n_jobs=-1,
+    )
+
+    # Fit the model with early stopping rounds and validation data
+    fit_params = {
+        "early_stopping_rounds": 50,
+        "eval_set": [(X_val, y_val)],
+        "verbose": False,
+    }
+
+    grid_search.fit(X_train, y_train, **fit_params)
+
+    # Print best parameters
+    print("Best parameters found: ", grid_search.best_params_)
+
+    # Predict on validation set
+    y_pred_optimized = grid_search.predict(X_val)
+
+    # Calculate MAE for optimized XGBoost
+    mae_optimized = np.mean(np.abs(y_pred_optimized - y_val))
+    print(f"Optimized XGBoost MAE: {mae_optimized}")
 
 
 # %%
