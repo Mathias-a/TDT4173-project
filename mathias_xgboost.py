@@ -70,7 +70,7 @@ COLUMNS_TO_KEEP = [
 ] + CUSTOM_COLUMNS_TO_KEEP
 
 LOCATION = "A"
-SHIFTS = [24 * 31, 24*62, 7*24]
+SHIFTS = []
 MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %% [markdown]
