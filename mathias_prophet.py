@@ -161,11 +161,11 @@ df_merged = pd.merge(
 df_merged = df_merged.resample("H", on="date_forecast").mean()
 
 # Add columns for hour of day, and month of year using sine and cosine to capture the cyclical nature
-df_merged['hour_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
-df_merged['hour_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
+# df_merged['hour_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
+# df_merged['hour_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
 
-df_merged['month_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
-df_merged['month_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
+# df_merged['month_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
+# df_merged['month_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
 
 # Keep only relevant columns
 df_merged = df_merged[COLUMNS_TO_KEEP]
@@ -308,8 +308,8 @@ model = Prophet(
     holidays_prior_scale=0.01,
     changepoint_prior_scale=0.03,
     mcmc_samples=0,
-    interval_width=0.8,
-    uncertainty_samples=1000,
+    interval_width=0.001,
+    uncertainty_samples=0,
 )
 
 # Add regressors
@@ -335,7 +335,7 @@ fig.show()
 
 # %%
 param_grid = {
-    'seasonality_prior_scale': [0.1, 0.5, 1.0, 3.0, 5.0, 10.0, 15.0, 20.0, 30.0, 60.0],
+    'uncertainty_samples': [1, 5, 10, 50, 100, 300, 500, 1000],
 }
 best_parameters = None
 best_mae = float('inf')
@@ -354,12 +354,12 @@ for params in all_params:
         daily_seasonality="auto",
         holidays=None,
         seasonality_mode="additive",
-        # seasonality_prior_scale=15.0,
+        seasonality_prior_scale=0.001,
         holidays_prior_scale=0.01,
         changepoint_prior_scale=0.03,
         mcmc_samples=0,
-        interval_width=0.8,
-        uncertainty_samples=1000,
+        interval_width=0.001,
+        uncertainty_samples=0,
     )
 
     # Add regressors
@@ -369,7 +369,7 @@ for params in all_params:
 
     temp_model.fit(prophet_train)
 
-    df_cv = cross_validation(temp_model, '365 days', initial='730 days', period='180 days')
+    df_cv = cross_validation(temp_model, '30 days', initial='730 days', period='30 days')
     mae = np.mean(np.abs(df_cv["yhat"] - df_cv["y"]))
     if mae < best_mae:
         best_mae = mae
@@ -378,41 +378,3 @@ for params in all_params:
 print(f"Best MAE: {best_mae}")
 print(best_parameters)
 
-# %% [markdown]
-# # XGBoost Model
-
-# %%
-
-# Convert data to DMatrix for XGBoost
-dtrain = xgb.DMatrix(X_train, label=y_train)
-dval = xgb.DMatrix(X_val, label=y_val)
-
-# Define XGBoost parameters
-xgb_params = {
-    'objective': 'reg:squarederror',
-    'eval_metric': 'mae',
-    'eta': 0.1,
-    'max_depth': 6,
-    'subsample': 0.7,
-    'colsample_bytree': 0.8,
-    'min_child_weight': 5
-}
-
-# Train XGBoost model
-num_rounds = 1000
-watchlist = [(dtrain, 'train'), (dval, 'eval')]
-xgb_model = xgb.train(xgb_params, dtrain, num_rounds, watchlist, early_stopping_rounds=50, verbose_eval=10)
-
-# %% [markdown]
-# # XGBoost Prediction and Evaluation
-
-# %%
-
-# Predict with XGBoost
-y_pred_xgb = xgb_model.predict(dval, ntree_limit=xgb_model.best_ntree_limit)
-
-# Calculate MAE for XGBoost
-xgb_mae = np.mean(np.abs(y_pred_xgb - y_val))
-print(f"XGBoost MAE: {xgb_mae}")
-
-# %%

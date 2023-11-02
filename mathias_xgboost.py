@@ -92,11 +92,17 @@ def load_and_combine_data():
         by="date_forecast"
     )
     df_resampled = df_combined.resample("H", on="date_forecast").mean()
+    df_resampled = df_resampled.reset_index()
+
     # 3. Merge with target data
-    df_resampled = pd.merge(
-        df_combined, df_target, left_on="date_forecast", right_on="time", how="inner"
+    df_merge = pd.merge(
+        df_resampled, df_target, left_on="date_forecast", right_on="time", how="inner"
     )
-    return df_resampled
+
+    # Resetting the index to add 'date_forecast' back as a column
+    df_merge.reset_index(inplace=True)
+
+    return df_merge
 
 
 df_merged = load_and_combine_data()
@@ -216,6 +222,7 @@ print(f"Baseline MAE: {baseline_mae}")
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dval = xgb.DMatrix(X_val, label=y_val)
 
+
 def train_model():
     # Modified XGBoost parameters to prevent overfitting
     xgb_params = {
@@ -320,6 +327,7 @@ def make_predictions(location, df_test):
 data_test = load_and_combine_data()
 data_test = preprocess_test_data(data_test)
 
+# print number of rows in data_test without pv_measurement
 # Read the Kaggle test.csv to get the location and ids
 df_submission = pd.read_csv("data/test.csv")
 
