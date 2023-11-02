@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 def rank_features_by_correlation(data_parquet_file, target_parquet_file):
@@ -8,6 +9,14 @@ def rank_features_by_correlation(data_parquet_file, target_parquet_file):
     # Check if 'date_forecast' and 'time' columns exist in their respective DataFrames
     if 'date_forecast' not in df_data.columns or 'time' not in df_target.columns:
         raise ValueError("'date_forecast' or 'time' column not found in one or both datasets")
+
+    df_data['hour_sin'] = np.sin(2 * np.pi * df_data['date_forecast'].dt.hour / 24)
+    df_data['hour_cos'] = np.cos(2 * np.pi * df_data['date_forecast'].dt.hour / 24)
+
+    df_data['month_sin'] = np.sin(2 * np.pi * df_data['date_forecast'].dt.month / 12)
+    df_data['month_cos'] = np.cos(2 * np.pi * df_data['date_forecast'].dt.month / 12)
+
+
 
     # Merge the datasets based on 'date_forecast' and 'time'
     df_merged = pd.merge(df_data, df_target, left_on='date_forecast', right_on='time', how='inner')
@@ -28,7 +37,7 @@ def rank_features_by_correlation(data_parquet_file, target_parquet_file):
     return ranked_features
 
 # Usage example
-data_parquet_file = "data-2/A/X_train_estimated.parquet"
-target_parquet_file = "data-2/A/train_targets.parquet"
+data_parquet_file = "data/B/X_train_estimated.parquet"
+target_parquet_file = "data/B/train_targets.parquet"
 ranked_features = rank_features_by_correlation(data_parquet_file, target_parquet_file)
 print(ranked_features)

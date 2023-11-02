@@ -161,11 +161,11 @@ df_merged = pd.merge(
 df_merged = df_merged.resample("H", on="date_forecast").mean()
 
 # Add columns for hour of day, and month of year using sine and cosine to capture the cyclical nature
-df_merged["hour_sin"] = np.sin(2 * np.pi * df_merged.index.hour / 24)
-df_merged["hour_cos"] = np.cos(2 * np.pi * df_merged.index.hour / 24)
+df_merged['hour_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
+df_merged['hour_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
 
-df_merged["month_sin"] = np.sin(2 * np.pi * df_merged.index.month / 12)
-df_merged["month_cos"] = np.cos(2 * np.pi * df_merged.index.month / 12)
+df_merged['month_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
+df_merged['month_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
 
 # Keep only relevant columns
 df_merged = df_merged[COLUMNS_TO_KEEP]
