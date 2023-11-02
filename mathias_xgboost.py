@@ -13,8 +13,8 @@ from sklearn.model_selection import GridSearchCV
 # %%
 
 CUSTOM_COLUMNS_TO_KEEP = [
-    "hour_cos",
-    "hour_sin",
+    # "hour_cos",
+    # "hour_sin",
     # "month_sin",
     # "month_cos",
     "day-of-year",
@@ -68,15 +68,17 @@ COLUMNS_TO_KEEP = [
     "wind_speed_w_1000hPa:ms",
     # "date_calc",
     "pv_measurement",
+    # "date_forecast",
 ] + CUSTOM_COLUMNS_TO_KEEP
 
-LOCATION = "C"
+LOCATION = "A"
 
-PV_SHIFTS = [31 * 24, 62 * 24]
-MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
+PV_SHIFTS = [30 * 24, 60 * 24]
+MODEL_FILENAME = f"models/xgboost_model_{LOCATION}.json"
 
 # %% [markdown]
 # # Load Data
+
 
 # %%
 # 1. Load data
@@ -106,12 +108,12 @@ df_merged = load_and_combine_data()
 # Downsampling the dataframe to hourly intervals
 # Add columns for hour of day, and month of year using sine and cosine to capture the cyclical nature
 def add_custom_fields(df):
-    df['hour_sin'] = np.sin(2 * np.pi * df['date_forecast'].dt.hour / 24)
-    df['hour_cos'] = np.cos(2 * np.pi * df['date_forecast'].dt.hour / 24)
+    df["hour_sin"] = np.sin(2 * np.pi * df["date_forecast"].dt.hour / 24)
+    df["hour_cos"] = np.cos(2 * np.pi * df["date_forecast"].dt.hour / 24)
 
-    df['month_sin'] = np.sin(2 * np.pi * df['date_forecast'].dt.month / 12)
-    df['month_cos'] = np.cos(2 * np.pi * df['date_forecast'].dt.month / 12)
-    df['day-of-year'] = df['date_forecast'].dt.dayofyear
+    df["month_sin"] = np.sin(2 * np.pi * df["date_forecast"].dt.month / 12)
+    df["month_cos"] = np.cos(2 * np.pi * df["date_forecast"].dt.month / 12)
+    df["day-of-year"] = df["date_forecast"].dt.dayofyear
     return df
 
 
@@ -162,10 +164,9 @@ def remove_outliers(df):
     Returns:
     - DataFrame: dataframe with outliers removed
     """
-    Q1 = df.quantile(0.05)
     Q3 = df.quantile(0.95)
-    IQR = Q3 - Q1
-    outlier_condition = ~((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR)))
+    IQR = Q3 - 0
+    outlier_condition = ~((df < (0 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR)))
     return df[outlier_condition].dropna()
 
 
@@ -212,36 +213,39 @@ print(f"Baseline MAE: {baseline_mae}")
 # # XGBoost Model
 
 # %%
-
-# Convert data to DMatrix for XGBoost
 dtrain = xgb.DMatrix(X_train, label=y_train)
 dval = xgb.DMatrix(X_val, label=y_val)
 
-# Modified XGBoost parameters to prevent overfitting
-xgb_params = {
-    "objective": "reg:squarederror",
-    "eval_metric": "mae",
-    "eta": 0.0005,  # Reduced learning rate
-    "max_depth": 7,  # Reduced tree depth
-    "subsample": 0.7,  # Reduced subsampling
-    "colsample_bytree": 0.8,  # Reduced column sampling
-    "min_child_weight": 7,  # Increased min_child_weight
-    "alpha": 0.4,  # L1 regularization
-    "lambda": 1,  # L2 regularization
-}
+def train_model():
+    # Modified XGBoost parameters to prevent overfitting
+    xgb_params = {
+        "objective": "reg:squarederror",
+        "eval_metric": "mae",
+        "eta": 0.0005,
+        "max_depth": 7,
+        "subsample": 0.7,
+        "colsample_bytree": 0.8,
+        "min_child_weight": 7,
+        "alpha": 0.4,
+        "lambda": 1,
+    }
 
-# Train XGBoost model with modifications
-num_rounds = 50000  # Increased boosting rounds due to reduced eta
-xgb_model = xgb.train(
-    params=xgb_params,
-    dtrain=dtrain,
-    num_boost_round=num_rounds,
-    evals=[(dtrain, "train"), (dval, "eval")],
-    early_stopping_rounds=200,  # Increased early stopping rounds
-    verbose_eval=10,
-)
-xgb_model.save_model(MODEL_FILENAME)
+    # Train XGBoost model with modifications
+    num_rounds = 50000  # Increased boosting rounds due to reduced eta
+    xgb_model = xgb.train(
+        params=xgb_params,
+        dtrain=dtrain,
+        num_boost_round=num_rounds,
+        evals=[(dtrain, "train"), (dval, "eval")],
+        early_stopping_rounds=200,  # Increased early stopping rounds
+        verbose_eval=10,
+    )
+    xgb_model.save_model(MODEL_FILENAME)
 
+    return xgb_model
+
+
+xgb_model = train_model()
 
 # %% [markdown]
 # # XGBoost Prediction and Evaluation
@@ -252,7 +256,9 @@ xgb_loaded_model = xgb.Booster()
 xgb_loaded_model.load_model(MODEL_FILENAME)
 
 # Predict with XGBoost
-y_pred_xgb = xgb_loaded_model.predict(dval, iteration_range=(0, xgb_loaded_model.best_iteration + 1))
+y_pred_xgb = xgb_loaded_model.predict(
+    dval, iteration_range=(0, xgb_loaded_model.best_iteration + 1)
+)
 y_pred_xgb[y_pred_xgb < 0] = 0
 
 # Calculate MAE for XGBoost
@@ -261,8 +267,17 @@ print(f"XGBoost MAE: {xgb_mae}")
 
 # Plot the actual vs predicted values
 plt.figure(figsize=(12, 6))
-plt.plot(y_val.reset_index(drop=True), label="Actual", color='blue')
-plt.plot(y_pred_xgb, label="Predicted", color='red')
+plt.plot(y_val.reset_index(drop=True), label="Actual", color="blue")
+print(y_pred_xgb.shape)
+plt.plot(y_pred_xgb, label="Predicted", color="red")
+plt.title("XGBoost Predictions vs Actuals")
+plt.legend()
+plt.show()
+
+plt.figure(figsize=(60, 6))
+x_range = np.arange(720)
+plt.plot(x_range, y_val.reset_index(drop=True).tail(720), label="Actual", color="blue")
+plt.plot(x_range, y_pred_xgb.flatten()[-720:], label="Predicted", color="red")
 plt.title("XGBoost Predictions vs Actuals")
 plt.legend()
 plt.show()
@@ -278,14 +293,16 @@ plt.show()
 # %%
 def load_model(location):
     model = xgb.Booster()
-    model.load_model(f'models/xgboost_model_{location}.json')
+    model.load_model(f"models/xgboost_model_{location}.json")
     return model
+
 
 def preprocess_test_data(df_test: pd.DataFrame):
     # add steps for combining the original training data before the test data, in order to keep shifted values
     df_test = add_custom_fields(df_test)
     df_test = df_test[COLUMNS_TO_KEEP]
     df_test.fillna(0, inplace=True)
+
     for shift in PV_SHIFTS:
         df_test = add_lagged_features(df_test, COLUMNS_TO_KEEP, shift)
     return df_test
@@ -300,27 +317,13 @@ def make_predictions(location, df_test):
 
 
 # 2. Combine observed and estimated datasets
-data = load_and_combine_data()
-
+data_test = load_and_combine_data()
+data_test = preprocess_test_data(data_test)
 
 # Read the Kaggle test.csv to get the location and ids
 df_submission = pd.read_csv("data/test.csv")
 
-locations = ["A", "B", "C"]
-
-# Iterate over the locations and fill in the predictions
-for loc in locations:
-    print(loc)
-    # Load forecasted weather data for testing for the current location
-    df_loc = pd.read_parquet(f"data/{loc}/X_test_estimated.parquet")
-    preds = make_predictions(loc, df_loc)
-    # Assign the predictions to df_submission for the current location
-    mask = df_submission["location"] == loc
-    df_submission.loc[mask, "prediction"] = preds
-
-# Save the results to a new submission file
-df_submission[["id", "prediction"]].to_csv("sample_kaggle_submission.csv", index=False)
-
+merged_data = pd.merge(df_submission, data_test, on="date_forecast", how="left")
 
 
 # %% [markdown]
