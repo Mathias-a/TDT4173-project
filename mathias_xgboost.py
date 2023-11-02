@@ -13,8 +13,8 @@ from sklearn.model_selection import GridSearchCV
 # %%
 
 CUSTOM_COLUMNS_TO_KEEP = [
-    # "hour_cos",
-    # "hour_sin",
+    "hour_cos",
+    "hour_sin",
     # "month_sin",
     # "month_cos",
     "day-of-year",
@@ -61,7 +61,7 @@ COLUMNS_TO_KEEP = [
     "sfc_pressure:hPa",
     "prob_rime:p",
     "wind_speed_10m:ms",
-    "elevation:m",
+    # "elevation:m",
     "snow_density:kgm3",
     "snow_drift:idx",
     "snow_melt_10min:mm",
@@ -70,9 +70,9 @@ COLUMNS_TO_KEEP = [
     "pv_measurement",
 ] + CUSTOM_COLUMNS_TO_KEEP
 
-LOCATION = "A"
+LOCATION = "C"
 
-SHIFTS = [31 * 24, 62 * 24]
+PV_SHIFTS = [31 * 24, 62 * 24]
 MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %% [markdown]
@@ -80,22 +80,25 @@ MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %%
 # 1. Load data
-df_observed = pd.read_parquet(f"data/{LOCATION}/X_train_observed.parquet")
-df_estimated = pd.read_parquet(f"data/{LOCATION}/X_train_estimated.parquet")
-df_target = pd.read_parquet(f"data/{LOCATION}/train_targets.parquet")
+def load_and_combine_data():
+    df_observed = pd.read_parquet(f"data/{LOCATION}/X_train_observed.parquet")
+    df_estimated = pd.read_parquet(f"data/{LOCATION}/X_train_estimated.parquet")
+    df_target = pd.read_parquet(f"data/{LOCATION}/train_targets.parquet")
 
-# 2. Combine observed and estimated datasets
-df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(
-    by="date_forecast"
-)
+    # 2. Combine observed and estimated datasets
+    df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(
+        by="date_forecast"
+    )
+    df_resampled = df_combined.resample("H", on="date_forecast").mean()
+    # 3. Merge with target data
+    df_resampled = pd.merge(
+        df_combined, df_target, left_on="date_forecast", right_on="time", how="inner"
+    )
+    return df_resampled
 
-df_merged = df_combined.resample("H", on="date_forecast").mean()
 
-# 3. Merge with target data
-df_merged = pd.merge(
-    df_combined, df_target, left_on="date_forecast", right_on="time", how="inner"
-)
-# %% [markdown]
+df_merged = load_and_combine_data()
+
 # # Downsampling and Feature Engineering
 
 
@@ -136,7 +139,7 @@ def add_lagged_features(df, features, shift_value):
     return df
 
 
-for shift in SHIFTS:
+for shift in PV_SHIFTS:
     df_merged = add_lagged_features(df_merged, COLUMNS_TO_KEEP, shift)
 
 # Remember to drop NaN values introduced by shifting
@@ -250,6 +253,7 @@ xgb_loaded_model.load_model(MODEL_FILENAME)
 
 # Predict with XGBoost
 y_pred_xgb = xgb_loaded_model.predict(dval, iteration_range=(0, xgb_loaded_model.best_iteration + 1))
+y_pred_xgb[y_pred_xgb < 0] = 0
 
 # Calculate MAE for XGBoost
 xgb_mae = np.mean(np.abs(y_pred_xgb - y_val))
@@ -272,6 +276,50 @@ plt.show()
 
 
 # %%
+def load_model(location):
+    model = xgb.Booster()
+    model.load_model(f'models/xgboost_model_{location}.json')
+    return model
+
+def preprocess_test_data(df_test: pd.DataFrame):
+    # add steps for combining the original training data before the test data, in order to keep shifted values
+    df_test = add_custom_fields(df_test)
+    df_test = df_test[COLUMNS_TO_KEEP]
+    df_test.fillna(0, inplace=True)
+    for shift in PV_SHIFTS:
+        df_test = add_lagged_features(df_test, COLUMNS_TO_KEEP, shift)
+    return df_test
+
+
+def make_predictions(location, df_test):
+    model = load_model(location)
+    dtest = xgb.DMatrix(df_test)
+    y_pred = model.predict(dtest)
+    y_pred[y_pred < 0] = 0
+    return y_pred
+
+
+# 2. Combine observed and estimated datasets
+data = load_and_combine_data()
+
+
+# Read the Kaggle test.csv to get the location and ids
+df_submission = pd.read_csv("data/test.csv")
+
+locations = ["A", "B", "C"]
+
+# Iterate over the locations and fill in the predictions
+for loc in locations:
+    print(loc)
+    # Load forecasted weather data for testing for the current location
+    df_loc = pd.read_parquet(f"data/{loc}/X_test_estimated.parquet")
+    preds = make_predictions(loc, df_loc)
+    # Assign the predictions to df_submission for the current location
+    mask = df_submission["location"] == loc
+    df_submission.loc[mask, "prediction"] = preds
+
+# Save the results to a new submission file
+df_submission[["id", "prediction"]].to_csv("sample_kaggle_submission.csv", index=False)
 
 
 
