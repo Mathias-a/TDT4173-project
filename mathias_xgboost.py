@@ -13,10 +13,11 @@ from sklearn.model_selection import GridSearchCV
 # %%
 
 CUSTOM_COLUMNS_TO_KEEP = [
-    "hour_cos",
-    "hour_sin",
-    "month_sin",
-    "month_cos",
+    # "hour_cos",
+    # "hour_sin",
+    # "month_sin",
+    # "month_cos",
+    "day-of-year",
 ]
 
 COLUMNS_TO_KEEP = [
@@ -97,15 +98,21 @@ df_merged = pd.merge(
 # %% [markdown]
 # # Downsampling and Feature Engineering
 
+
 # %%
 # Downsampling the dataframe to hourly intervals
 # Add columns for hour of day, and month of year using sine and cosine to capture the cyclical nature
-df_merged['hour_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
-df_merged['hour_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.hour / 24)
+def add_custom_fields(df):
+    df['hour_sin'] = np.sin(2 * np.pi * df['date_forecast'].dt.hour / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['date_forecast'].dt.hour / 24)
 
-df_merged['month_sin'] = np.sin(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
-df_merged['month_cos'] = np.cos(2 * np.pi * df_merged['date_forecast'].dt.month / 12)
+    df['month_sin'] = np.sin(2 * np.pi * df['date_forecast'].dt.month / 12)
+    df['month_cos'] = np.cos(2 * np.pi * df['date_forecast'].dt.month / 12)
+    df['day-of-year'] = df['date_forecast'].dt.dayofyear
+    return df
 
+
+df_merged = add_custom_fields(df_merged)
 # Keep only relevant columns
 df_merged = df_merged[COLUMNS_TO_KEEP]
 
