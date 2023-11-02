@@ -422,11 +422,37 @@ def calculate_mae(submission_file_1, submission_file_2):
     return mae
 
 
+def plot_comparisons(submission_file_1, submission_file_2):
+    # Load the submission files
+    sub_1 = pd.read_csv(submission_file_1)
+    sub_2 = pd.read_csv(submission_file_2)
+    
+    # Merge the two DataFrames on the common key (assuming 'date_forecast' is the key)
+    merged_sub = pd.merge(sub_1, sub_2, on='id', suffixes=('_1', '_2'))
+    
+    # Plotting
+    plt.figure(figsize=(15, 5))
+    plt.plot(merged_sub['id'], merged_sub['prediction_1'], label='Submission 1')
+    plt.plot(merged_sub['id'], merged_sub['prediction_2'], label='Submission 2', alpha=0.7)
+    plt.title('Comparison of Predictions')
+    plt.xlabel('Date')
+    plt.ylabel('Predictions')
+    plt.legend()
+    plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
+    plt.tight_layout()
+    plt.show()
+
+
 # Calculate MAE between the two provided submission files
 mae_value = calculate_mae(
     "predictions/combined_delivery_file.csv",
     "sample_kaggle_submission.csv",
 )
+plot_comparisons(
+    "predictions/combined_delivery_file.csv",
+    "sample_kaggle_submission.csv"
+)
+
 print(mae_value)
 
 # %% [markdown]
