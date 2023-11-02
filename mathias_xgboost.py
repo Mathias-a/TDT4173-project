@@ -39,7 +39,7 @@ COLUMNS_TO_KEEP = [
     "wind_speed_u_10m:ms",
     "t_1000hPa:K",
     "absolute_humidity_2m:gm3",
-     "snow_water:kgm2",
+    "snow_water:kgm2",
     "relative_humidity_1000hPa:p",
     "fresh_snow_24h:cm",
     "cloud_base_agl:m",
@@ -70,8 +70,7 @@ COLUMNS_TO_KEEP = [
 ] + CUSTOM_COLUMNS_TO_KEEP
 
 LOCATION = "A"
-lag_features = ["pv_measurement", "direct_rad:W"]
-SHIFTS = [1, 2, 3, 24]
+SHIFTS = [24 * 31, 24*62, 7*24]
 MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %% [markdown]
@@ -88,17 +87,17 @@ df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(
     by="date_forecast"
 )
 
+df_merged = df_combined.resample("H", on="date_forecast").mean()
+
 # 3. Merge with target data
 df_merged = pd.merge(
     df_combined, df_target, left_on="date_forecast", right_on="time", how="inner"
 )
-
 # %% [markdown]
 # # Downsampling and Feature Engineering
 
 # %%
 # Downsampling the dataframe to hourly intervals
-df_merged = df_merged.resample("H", on="date_forecast").mean()
 
 # Keep only relevant columns
 df_merged = df_merged[COLUMNS_TO_KEEP]
@@ -112,14 +111,13 @@ df_merged.fillna(0, inplace=True)  # Fill NaN values
 
 
 # %%
-def add_lagged_features(df, features, shift):
+def add_lagged_features(df, features, shift_value):
     """
     This function takes in a dataframe, a list of features, and a shift interval.
     It returns the dataframe with the lagged features added.
     """
     for feature in features:
-        if feature != "pv_measurement":
-            df[f"{feature}_lagged_{shift}h"] = df[feature].shift(shift)
+        df[f"{feature}_lagged_{shift_value}h"] = df[feature].shift(shift_value)
     return df
 
 
@@ -250,7 +248,7 @@ plt.title("XGBoost Predictions vs Actuals")
 plt.legend()
 plt.show()
 
-xgb.plot_importance(xgb_loaded_model)
+xgb.plot_importance(xgb_loaded_model, max_num_features=10)
 plt.show()
 
 
@@ -264,61 +262,6 @@ plt.show()
 
 # %% [markdown]
 # # XGBoost finding opptimal hyperparameters
-
-
-# %%
-def preprocess_test_data(df, columns_to_keep, shifts):
-    # Ensure 'pv_measurement' is not in columns_to_keep for test data processing
-    if 'pv_measurement' in columns_to_keep:
-        columns_to_keep.remove('pv_measurement')
-
-    # Ensure the index is a datetime
-    df['date_forecast'] = pd.to_datetime(df['date_forecast'])
-    df.set_index('date_forecast', inplace=True)
-    # Resample to 1-hour intervals
-    df = df.resample('1H').mean()
-    df = df.dropna(how='all').reset_index(drop=True)
-    # Keep only the columns used during training (minus the target column)
-    df = df[columns_to_keep]
-    # Add lagged features
-    for shift in shifts:
-        df = add_lagged_features(df, columns_to_keep, shift)
-    # Drop NaN values introduced by shifting
-    df.dropna(inplace=True)
-    # Return processed dataframe
-    return df
-
-
-
-# Read the Kaggle test.csv to get the location and ids
-df_submission = pd.read_csv("data/test.csv")
-
-locations = ["A", "B", "C"]
-
-# Create a list to store our final predictions and IDs
-final_predictions = []
-final_ids = []
-
-for loc in locations:
-    print(f"Processing location: {loc}")
-    # Load forecasted weather data for testing for the current location
-    df_loc = pd.read_parquet(f"data/{loc}/X_test_estimated.parquet")
-    df_loc_processed = preprocess_test_data(df_loc, COLUMNS_TO_KEEP, SHIFTS)
-    # Convert data to DMatrix for XGBoost
-    dtest = xgb.DMatrix(df_loc_processed)
-    # Predict using XGBoost model
-    preds = xgb_model.predict(dtest, iteration_range=(0, xgb_model.best_iteration + 1))
-    final_predictions.extend(preds)
-    final_ids.extend(df_submission[df_submission["location"] == loc]["id"].values)
-
-# Create a DataFrame for the final predictions and save to CSV
-df_final_submission = pd.DataFrame({
-    "id": final_ids,
-    "prediction": final_predictions
-})
-
-# Save the results to a new submission file
-df_final_submission.to_csv("xgboost_kaggle_submission.csv", index=False)
 
 
 # %%
