@@ -68,7 +68,7 @@ COLUMNS_TO_KEEP = [
     "wind_speed_w_1000hPa:ms",
     # "date_calc",
     "pv_measurement",
-    # "date_forecast",
+    "date_forecast",
 ] + CUSTOM_COLUMNS_TO_KEEP
 
 LOCATION = "A"
@@ -87,21 +87,22 @@ def load_and_combine_data():
     df_estimated = pd.read_parquet(f"data/{LOCATION}/X_train_estimated.parquet")
     df_target = pd.read_parquet(f"data/{LOCATION}/train_targets.parquet")
 
+    # print the span of dates in the estimated dataset
+    print(
+        f"Estimated dataset spans from {df_estimated['date_forecast'].min()} to {df_estimated['date_forecast'].max()}"
+    )
+
     # 2. Combine observed and estimated datasets
     df_combined = pd.concat([df_observed, df_estimated], axis=0).sort_values(
         by="date_forecast"
     )
+
     df_resampled = df_combined.resample("H", on="date_forecast").mean()
     df_resampled = df_resampled.reset_index()
-
     # 3. Merge with target data
     df_merge = pd.merge(
         df_resampled, df_target, left_on="date_forecast", right_on="time", how="inner"
     )
-
-    # Resetting the index to add 'date_forecast' back as a column
-    df_merge.reset_index(inplace=True)
-
     return df_merge
 
 
@@ -186,7 +187,7 @@ def remove_outliers(df):
 # %%
 # Split data
 y = df_merged["pv_measurement"]
-X = df_merged.drop("pv_measurement", axis=1)
+X = df_merged.drop(["pv_measurement", "date_forecast"], axis=1)
 X_train, X_val, y_train, y_val = train_test_split(
     X, y, test_size=0.2, random_state=42, shuffle=False
 )
@@ -318,21 +319,115 @@ def preprocess_test_data(df_test: pd.DataFrame):
 def make_predictions(location, df_test):
     model = load_model(location)
     dtest = xgb.DMatrix(df_test)
-    y_pred = model.predict(dtest)
+    y_pred = model.predict(dtest, iteration_range=(0, model.best_iteration + 1))
     y_pred[y_pred < 0] = 0
     return y_pred
 
 
 # 2. Combine observed and estimated datasets
-data_test = load_and_combine_data()
-data_test = preprocess_test_data(data_test)
+train_dataset = load_and_combine_data()
 
-# print number of rows in data_test without pv_measurement
-# Read the Kaggle test.csv to get the location and ids
-df_submission = pd.read_csv("data/test.csv")
+raw_test_dataset = pd.read_parquet(f"data/{LOCATION}/X_test_estimated.parquet")
+raw_test_dataset = raw_test_dataset.resample("H", on="date_forecast").mean()
+raw_test_dataset = raw_test_dataset.reset_index()
 
-merged_data = pd.merge(df_submission, data_test, on="date_forecast", how="left")
 
+# 3. Merge train and raw dataset, so that we can use the same preprocessing
+df_test = pd.concat([train_dataset, raw_test_dataset], axis=0).sort_values(
+    by="date_forecast"
+)
+
+test_csv = pd.read_csv(f"data/test.csv")
+# Get test_csv values only for the given location
+test_csv = test_csv[test_csv["location"] == LOCATION]
+
+
+test_dataset = preprocess_test_data(df_test)
+
+test_dataset = test_dataset.loc[
+    test_dataset["date_forecast"].isin(test_csv["time"])
+]
+old_test_dataset = test_dataset.copy()
+print(test_dataset.shape)
+test_dataset = test_dataset.drop(["date_forecast"], axis=1)
+print(test_dataset.shape)
+
+# 4. predict
+test_dataset.drop(["pv_measurement"], axis=1, inplace=True)
+y_pred = make_predictions(LOCATION, test_dataset)
+
+# 5. save predictions
+old_test_dataset["pv_prediction"] = y_pred
+old_test_dataset["LOCATION"] = LOCATION
+old_test_dataset = old_test_dataset[["date_forecast", "pv_prediction", "LOCATION"]]
+old_test_dataset.to_csv(f"predictions/{LOCATION}_xgboost.csv", index=False)
+
+
+# %% [markdown]
+# # Combine CSVs
+
+
+def combine_location_files(a_file, b_file, c_file, output_file=None):
+    # Load the files
+    a_data = pd.read_csv(a_file)
+    b_data = pd.read_csv(b_file)
+    c_data = pd.read_csv(c_file)
+
+    # Concatenate the data from the three files
+    combined_data = pd.concat([a_data, b_data, c_data], ignore_index=True)
+
+    # Sort by date_forecast and LOCATION
+    combined_data = combined_data.sort_values(by=["date_forecast", "LOCATION"])
+
+    # Create the delivery file structure
+    delivery_file = pd.DataFrame(
+        {"id": range(len(combined_data)), "prediction": combined_data["pv_prediction"]}
+    )
+
+    # Save to file if output_file is provided
+    if output_file:
+        delivery_file.to_csv(output_file, index=False)
+
+    return delivery_file
+
+
+# Example usage of the function to generate and save the combined delivery file
+output_path = "predictions/combined_delivery_file.csv"
+delivery_file = combine_location_files(
+    "predictions/A_xgboost.csv",
+    "predictions/B_xgboost.csv",
+    "predictions/C_xgboost.csv",
+    output_file=output_path,
+)
+delivery_file.head()
+
+
+# %% [markdown]
+# # Compare with old delivery
+
+
+# %%
+def calculate_mae(submission_file_1, submission_file_2):
+    # Load the submission files
+    sub_1 = pd.read_csv(submission_file_1)
+    sub_2 = pd.read_csv(submission_file_2)
+
+    # Check if both files have the same number of rows
+    if len(sub_1) != len(sub_2):
+        raise ValueError("The two submission files have different lengths.")
+
+    # Compute the Mean Absolute Error
+    mae = (sub_1["prediction"] - sub_2["prediction"]).abs().mean()
+
+    return mae
+
+
+# Calculate MAE between the two provided submission files
+mae_value = calculate_mae(
+    "predictions/combined_delivery_file.csv",
+    "sample_kaggle_submission.csv",
+)
+print(mae_value)
 
 # %% [markdown]
 # # XGBoost finding opptimal hyperparameters
