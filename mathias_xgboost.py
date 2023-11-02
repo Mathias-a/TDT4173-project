@@ -70,7 +70,8 @@ COLUMNS_TO_KEEP = [
 ] + CUSTOM_COLUMNS_TO_KEEP
 
 LOCATION = "A"
-SHIFTS = []
+
+SHIFTS = [31 * 24, 62 * 24]
 MODEL_FILENAME = f'models/xgboost_model_{LOCATION}.json'
 
 # %% [markdown]
@@ -117,7 +118,8 @@ def add_lagged_features(df, features, shift_value):
     It returns the dataframe with the lagged features added.
     """
     for feature in features:
-        df[f"{feature}_lagged_{shift_value}h"] = df[feature].shift(shift_value)
+        if feature == "pv_measurement":
+            df[f"{feature}_lagged_{shift_value}h"] = df[feature].shift(shift_value)
     return df
 
 
