@@ -71,9 +71,12 @@ COLUMNS_TO_KEEP = [
     "date_forecast",
 ] + CUSTOM_COLUMNS_TO_KEEP
 
-LOCATION = "A"
+LOCATION = "C"
 
-PV_SHIFTS = [30 * 24, 60 * 24]
+PV_SHIFTS = [
+    # 30 * 24,
+    # 60 * 24,
+]
 MODEL_FILENAME = f"models/xgboost_model_{LOCATION}.json"
 
 # %% [markdown]
@@ -344,9 +347,7 @@ test_csv = test_csv[test_csv["location"] == LOCATION]
 
 test_dataset = preprocess_test_data(df_test)
 
-test_dataset = test_dataset.loc[
-    test_dataset["date_forecast"].isin(test_csv["time"])
-]
+test_dataset = test_dataset.loc[test_dataset["date_forecast"].isin(test_csv["time"])]
 old_test_dataset = test_dataset.copy()
 print(test_dataset.shape)
 test_dataset = test_dataset.drop(["date_forecast"], axis=1)
@@ -366,6 +367,8 @@ old_test_dataset.to_csv(f"predictions/{LOCATION}_xgboost.csv", index=False)
 # %% [markdown]
 # # Combine CSVs
 
+# %%
+
 
 def combine_location_files(a_file, b_file, c_file, output_file=None):
     # Load the files
@@ -377,7 +380,7 @@ def combine_location_files(a_file, b_file, c_file, output_file=None):
     combined_data = pd.concat([a_data, b_data, c_data], ignore_index=True)
 
     # Sort by date_forecast and LOCATION
-    combined_data = combined_data.sort_values(by=["date_forecast", "LOCATION"])
+    combined_data = combined_data.sort_values(by=["LOCATION", "date_forecast"])
 
     # Create the delivery file structure
     delivery_file = pd.DataFrame(
@@ -400,6 +403,8 @@ delivery_file = combine_location_files(
     output_file=output_path,
 )
 delivery_file.head()
+
+
 
 
 # %% [markdown]
@@ -426,17 +431,19 @@ def plot_comparisons(submission_file_1, submission_file_2):
     # Load the submission files
     sub_1 = pd.read_csv(submission_file_1)
     sub_2 = pd.read_csv(submission_file_2)
-    
+
     # Merge the two DataFrames on the common key (assuming 'date_forecast' is the key)
-    merged_sub = pd.merge(sub_1, sub_2, on='id', suffixes=('_1', '_2'))
-    
+    merged_sub = pd.merge(sub_1, sub_2, on="id", suffixes=("_1", "_2"))
+
     # Plotting
     plt.figure(figsize=(15, 5))
-    plt.plot(merged_sub['id'], merged_sub['prediction_1'], label='Submission 1')
-    plt.plot(merged_sub['id'], merged_sub['prediction_2'], label='Submission 2', alpha=0.7)
-    plt.title('Comparison of Predictions')
-    plt.xlabel('Date')
-    plt.ylabel('Predictions')
+    plt.plot(merged_sub["id"], merged_sub["prediction_1"], label="Submission 1")
+    plt.plot(
+        merged_sub["id"], merged_sub["prediction_2"], label="Submission 2", alpha=0.7
+    )
+    plt.title("Comparison of Predictions")
+    plt.xlabel("Date")
+    plt.ylabel("Predictions")
     plt.legend()
     plt.xticks(rotation=45)  # Rotate x-axis labels for better readability
     plt.tight_layout()
@@ -446,12 +453,9 @@ def plot_comparisons(submission_file_1, submission_file_2):
 # Calculate MAE between the two provided submission files
 mae_value = calculate_mae(
     "predictions/combined_delivery_file.csv",
-    "sample_kaggle_submission.csv",
+    "predictions_updated.csv",
 )
-plot_comparisons(
-    "predictions/combined_delivery_file.csv",
-    "sample_kaggle_submission.csv"
-)
+plot_comparisons("predictions/combined_delivery_file.csv", "predictions_updated.csv")
 
 print(mae_value)
 
