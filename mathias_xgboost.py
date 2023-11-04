@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import GridSearchCV
 
 
+
 # %% [markdown]
-# # Hyperparameters
+#  # Hyperparameters
 
 # %%
 
@@ -17,7 +18,7 @@ CUSTOM_COLUMNS_TO_KEEP = [
     # "hour_sin",
     # "month_sin",
     # "month_cos",
-    "day-of-year",
+    # "day-of-year",
 ]
 
 COLUMNS_TO_KEEP = [
@@ -62,7 +63,7 @@ COLUMNS_TO_KEEP = [
     "prob_rime:p",
     "wind_speed_10m:ms",
     # "elevation:m",
-    "snow_density:kgm3",
+    # "snow_density:kgm3",
     "snow_drift:idx",
     "snow_melt_10min:mm",
     "wind_speed_w_1000hPa:ms",
@@ -79,9 +80,9 @@ PV_SHIFTS = [
 ]
 MODEL_FILENAME = f"models/xgboost_model_{LOCATION}.json"
 
-# %% [markdown]
-# # Load Data
 
+# %% [markdown]
+#  # Load Data
 
 # %%
 # 1. Load data
@@ -114,6 +115,7 @@ df_merged = load_and_combine_data()
 # # Downsampling and Feature Engineering
 
 
+
 # %%
 # Downsampling the dataframe to hourly intervals
 # Add columns for hour of day, and month of year using sine and cosine to capture the cyclical nature
@@ -135,9 +137,9 @@ df_merged = df_merged[COLUMNS_TO_KEEP]
 df_merged = df_merged.dropna(subset=["pv_measurement"])
 df_merged.fillna(0, inplace=True)  # Fill NaN values
 
-# %% [markdown]
-# # Add lagged features
 
+# %% [markdown]
+#  # Add lagged features
 
 # %%
 def add_lagged_features(df, features, shift_value):
@@ -158,9 +160,9 @@ for shift in PV_SHIFTS:
 df_merged.dropna(inplace=True)
 
 
-# %% [markdown]
-# # Remove outliers
 
+# %% [markdown]
+#  # Remove outliers
 
 # %%
 # Remove outliers
@@ -184,8 +186,9 @@ def remove_outliers(df):
 # df_merged = remove_outliers(df_merged)
 
 
+
 # %% [markdown]
-# # Split Data into Train and Validation
+#  # Split Data into Train and Validation
 
 # %%
 # Split data
@@ -195,8 +198,9 @@ X_train, X_val, y_train, y_val = train_test_split(
     X, y, test_size=0.2, random_state=42, shuffle=False
 )
 
+
 # %% [markdown]
-# # Baseline model
+#  # Baseline model
 
 # %%
 
@@ -219,8 +223,9 @@ mask = (~baseline_predictions.isna()) & (~y_train.isna())
 baseline_mae = np.mean(np.abs(baseline_predictions[mask] - y_train[mask]))
 print(f"Baseline MAE: {baseline_mae}")
 
+
 # %% [markdown]
-# # XGBoost Model
+#  # XGBoost Model
 
 # %%
 dtrain = xgb.DMatrix(X_train, label=y_train)
@@ -258,8 +263,9 @@ def train_model():
 
 xgb_model = train_model()
 
+
 # %% [markdown]
-# # XGBoost Prediction and Evaluation
+#  # XGBoost Prediction and Evaluation
 
 # %%
 
@@ -297,9 +303,9 @@ xgb.plot_importance(xgb_loaded_model, max_num_features=10)
 plt.show()
 
 
-# %% [markdown]
-# # Predict on test set
 
+# %% [markdown]
+#  # Predict on test set
 
 # %%
 def load_model(location):
@@ -364,11 +370,11 @@ old_test_dataset = old_test_dataset[["date_forecast", "pv_prediction", "LOCATION
 old_test_dataset.to_csv(f"predictions/{LOCATION}_xgboost.csv", index=False)
 
 
+
 # %% [markdown]
-# # Combine CSVs
+#  # Combine CSVs
 
 # %%
-
 
 def combine_location_files(a_file, b_file, c_file, output_file=None):
     # Load the files
@@ -406,10 +412,8 @@ delivery_file.head()
 
 
 
-
 # %% [markdown]
-# # Compare with old delivery
-
+#  # Compare with old delivery
 
 # %%
 def calculate_mae(submission_file_1, submission_file_2):
@@ -459,9 +463,9 @@ plot_comparisons("predictions/combined_delivery_file.csv", "predictions_updated.
 
 print(mae_value)
 
-# %% [markdown]
-# # XGBoost finding opptimal hyperparameters
 
+# %% [markdown]
+#  # XGBoost finding opptimal hyperparameters
 
 # %%
 # Define the hyperparameter space
@@ -563,4 +567,8 @@ def optimize_xgb():
     print(f"Optimized XGBoost MAE: {mae_optimized}")
 
 
+
 # %%
+
+
+
