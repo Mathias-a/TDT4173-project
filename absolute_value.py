@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the CSV file into a DataFrame
-df = pd.read_csv('kaggle_submission_catboost_4.csv')
+df = pd.read_csv('kaggle_submission_catboost_5.csv')
 
 # Ensure there are no negative predictions
 df['prediction'] = df['prediction'].apply(lambda x: max(x, 0))
@@ -18,6 +18,6 @@ for i in range(1, len(df) - 1):
     # Check three consecutive non-zero predictions surrounded by zeros
 
 # Save the updated DataFrame back to a CSV file
-df.to_csv('predictions_updated_4.csv', index=False)
+df.to_csv('predictions_updated_5.csv', index=False)
 
 print("Single, double, or triple non-zero predictions surrounded by zeros have been set to zero.")
