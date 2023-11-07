@@ -1,2 +1,4 @@
 .venv 
 .DS_Store
+# all files with .cbm extension
+*.cbm
