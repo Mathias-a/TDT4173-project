@@ -1,7 +1,7 @@
 import pandas as pd
 
-df1 = pd.read_csv('predictions_updated_4.csv')
-df2 = pd.read_csv('predictions_updated_150.csv')
+df1 = pd.read_csv('predictions_updated_150.csv')
+df2 = pd.read_csv('predictions_updated_7.csv')
 
 # Verify that the IDs match in both DataFrames (assuming they are sorted and have the same length)
 if not df1['id'].equals(df2['id']):
@@ -26,4 +26,4 @@ df_average_last_720 = pd.DataFrame({
 df_combined = pd.concat([df_average_first_720, df_middle, df_average_last_720], ignore_index=True)
 
 # Save the combined predictions to a new CSV file
-df_combined.to_csv('combined_predictions_150_157.csv', index=False)
+df_combined.to_csv('combined_predictions_150_7.csv', index=False)
