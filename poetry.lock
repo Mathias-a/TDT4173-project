@@ -48,6 +48,108 @@ six = ">=1.12.0"
 test = ["astroid", "pytest"]
 
 [[package]]
+name = "autogluon-common"
+version = "0.8.3b20231108"
+description = "AutoML for Image, Text, and Tabular Data"
+optional = false
+python-versions = ">=3.8, <3.12"
+files = [
+    {file = "autogluon.common-0.8.3b20231108-py3-none-any.whl", hash = "sha256:120d81ab2bdb6243c4c618bbdb6ff26aa851471689e6480bcab1480dc7bd7ea2"},
+    {file = "autogluon.common-0.8.3b20231108.tar.gz", hash = "sha256:f938fd0c293cc46b586f79b2db696101609ae2c47716ed13603c730bdb81446c"},
+]
+
+[package.dependencies]
+boto3 = ">=1.10,<2"
+numpy = ">=1.21,<1.27"
+pandas = ">=2.0.0,<2.2.0"
+psutil = ">=5.7.3,<6"
+setuptools = "*"
+tqdm = ">=4.38,<5"
+
+[package.extras]
+tests = ["pytest", "pytest-mypy", "types-requests", "types-setuptools"]
+
+[[package]]
+name = "autogluon-core"
+version = "0.8.3b20231108"
+description = "AutoML for Image, Text, and Tabular Data"
+optional = false
+python-versions = ">=3.8, <3.12"
+files = [
+    {file = "autogluon.core-0.8.3b20231108-py3-none-any.whl", hash = "sha256:c2846833de98fadba3abded1d3a51968d9aa149a71c7c4bc21eb2253b105f0bf"},
+    {file = "autogluon.core-0.8.3b20231108.tar.gz", hash = "sha256:8d67ca55df23907b08fa36a681152bd7df3f7459ef970f004c85eae6378d369e"},
+]
+
+[package.dependencies]
+"autogluon.common" = "0.8.3b20231108"
+boto3 = ">=1.10,<2"
+matplotlib = "*"
+networkx = ">=3.0,<4"
+numpy = ">=1.21,<1.27"
+pandas = ">=2.0.0,<2.2.0"
+requests = "*"
+scikit-learn = ">=1.3.0,<1.5"
+scipy = ">=1.5.4,<1.12"
+tqdm = ">=4.38,<5"
+
+[package.extras]
+all = ["hyperopt (>=0.2.7,<0.2.8)", "ray[default,tune] (>=2.6.3,<2.7)", "ray[default] (>=2.6.3,<2.7)"]
+ray = ["ray[default] (>=2.6.3,<2.7)"]
+raytune = ["hyperopt (>=0.2.7,<0.2.8)", "ray[default,tune] (>=2.6.3,<2.7)"]
+tests = ["pytest", "pytest-mypy", "types-requests", "types-setuptools"]
+
+[[package]]
+name = "autogluon-features"
+version = "0.8.3b20231108"
+description = "AutoML for Image, Text, and Tabular Data"
+optional = false
+python-versions = ">=3.8, <3.12"
+files = [
+    {file = "autogluon.features-0.8.3b20231108-py3-none-any.whl", hash = "sha256:58d49f2689cebd412b3ce3fa1193bb24eb850e2fa4c4a94b02580006b406857d"},
+    {file = "autogluon.features-0.8.3b20231108.tar.gz", hash = "sha256:632900785ad2256016280225a2bd7837a10e2fbeb74b0db3aec1f4ead0758f65"},
+]
+
+[package.dependencies]
+"autogluon.common" = "0.8.3b20231108"
+numpy = ">=1.21,<1.27"
+pandas = ">=2.0.0,<2.2.0"
+scikit-learn = ">=1.3.0,<1.5"
+
+[[package]]
+name = "autogluon-tabular"
+version = "0.8.3b20231108"
+description = "AutoML for Image, Text, and Tabular Data"
+optional = false
+python-versions = ">=3.8, <3.12"
+files = [
+    {file = "autogluon.tabular-0.8.3b20231108-py3-none-any.whl", hash = "sha256:87dd0340b5c70f0400f61f87292d4faa1b57a7ae261e72a39e11606ca462c6cb"},
+    {file = "autogluon.tabular-0.8.3b20231108.tar.gz", hash = "sha256:7193b6b960e59201aebb4945b0b676d409de50940909a8c0aac78794ef4586a1"},
+]
+
+[package.dependencies]
+"autogluon.core" = "0.8.3b20231108"
+"autogluon.features" = "0.8.3b20231108"
+networkx = ">=3.0,<4"
+numpy = ">=1.21,<1.27"
+pandas = ">=2.0.0,<2.2.0"
+scikit-learn = ">=1.3.0,<1.5"
+scipy = ">=1.5.4,<1.12"
+
+[package.extras]
+all = ["autogluon.core[all] (==0.8.3b20231108)", "catboost (>=1.1,<1.2)", "catboost (>=1.1,<1.3)", "fastai (>=2.3.1,<2.8)", "lightgbm (>=3.3,<3.4)", "torch (>=2.0,<2.1)", "xgboost (>=1.6,<1.8)"]
+catboost = ["catboost (>=1.1,<1.2)", "catboost (>=1.1,<1.3)"]
+fastai = ["fastai (>=2.3.1,<2.8)", "torch (>=2.0,<2.1)"]
+imodels = ["imodels (>=1.3.10,<1.4.0)"]
+lightgbm = ["lightgbm (>=3.3,<3.4)"]
+ray = ["autogluon.core[all] (==0.8.3b20231108)"]
+skex = ["scikit-learn-intelex (>=2021.7,<2023.2)"]
+skl2onnx = ["onnxruntime-gpu (>=1.15.0,<1.16.0)", "skl2onnx (>=1.15.0,<1.16.0)"]
+tabpfn = ["tabpfn (>=0.1,<0.2)"]
+tests = ["imodels (>=1.3.10,<1.4.0)", "onnxruntime-gpu (>=1.15.0,<1.16.0)", "skl2onnx (>=1.15.0,<1.16.0)", "tabpfn (>=0.1,<0.2)", "vowpalwabbit (>=9,<9.9)"]
+vowpalwabbit = ["vowpalwabbit (>=9,<9.9)"]
+xgboost = ["xgboost (>=1.6,<1.8)"]
+
+[[package]]
 name = "backcall"
 version = "0.2.0"
 description = "Specifications for callback functions passed in to an API"
@@ -57,6 +159,44 @@ files = [
     {file = "backcall-0.2.0-py2.py3-none-any.whl", hash = "sha256:fbbce6a29f263178a1f7915c1940bde0ec2b2a967566fe1c65c1dfb7422bd255"},
     {file = "backcall-0.2.0.tar.gz", hash = "sha256:5cbdbf27be5e7cfadb448baf0aa95508f91f2bbc6c6437cd9cd06e2a4c215e1e"},
 ]
+
+[[package]]
+name = "boto3"
+version = "1.28.81"
+description = "The AWS SDK for Python"
+optional = false
+python-versions = ">= 3.7"
+files = [
+    {file = "boto3-1.28.81-py3-none-any.whl", hash = "sha256:66e457b5f1580eb1f29855d867dec743eeec42b3935372eee5e6730e5e3124df"},
+    {file = "boto3-1.28.81.tar.gz", hash = "sha256:6ec7da884eed5c07e679d251bd5c66e4e2f64755ed98270a20323b241c54a743"},
+]
+
+[package.dependencies]
+botocore = ">=1.31.81,<1.32.0"
+jmespath = ">=0.7.1,<2.0.0"
+s3transfer = ">=0.7.0,<0.8.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
+
+[[package]]
+name = "botocore"
+version = "1.31.81"
+description = "Low-level, data-driven core of boto 3."
+optional = false
+python-versions = ">= 3.7"
+files = [
+    {file = "botocore-1.31.81-py3-none-any.whl", hash = "sha256:eeb09a77c3e931667c9442565e8697e89e685089912a96d95f65b63e4b2c8c71"},
+    {file = "botocore-1.31.81.tar.gz", hash = "sha256:afb0886c5a5a542f763cc1644b1c1b4a783698d79980eb48052d1676d6b3d14e"},
+]
+
+[package.dependencies]
+jmespath = ">=0.7.1,<2.0.0"
+python-dateutil = ">=2.1,<3.0.0"
+urllib3 = {version = ">=1.25.4,<2.1", markers = "python_version >= \"3.10\""}
+
+[package.extras]
+crt = ["awscrt (==0.16.26)"]
 
 [[package]]
 name = "catboost"
@@ -860,6 +1000,17 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "jmespath"
+version = "1.0.1"
+description = "JSON Matching Expressions"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "jmespath-1.0.1-py3-none-any.whl", hash = "sha256:02e2e4cc71b5bcab88332eebf907519190dd9e6e82107fa7f83b1003a6252980"},
+    {file = "jmespath-1.0.1.tar.gz", hash = "sha256:90261b206d6defd58fdd5e85f478bf633a2901798906be2ad389150c5c60edbe"},
+]
+
+[[package]]
 name = "joblib"
 version = "1.3.2"
 description = "Lightweight pipelining with Python functions"
@@ -1083,13 +1234,13 @@ files = [
 
 [[package]]
 name = "mako"
-version = "1.3.0"
+version = "1.2.4"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.7"
 files = [
-    {file = "Mako-1.3.0-py3-none-any.whl", hash = "sha256:57d4e997349f1a92035aa25c17ace371a4213f2ca42f99bee9a602500cfd54d9"},
-    {file = "Mako-1.3.0.tar.gz", hash = "sha256:e3a9d388fd00e87043edbe8792f45880ac0114e9c4adc69f6e9bfb2c55e3b11b"},
+    {file = "Mako-1.2.4-py3-none-any.whl", hash = "sha256:c97c79c018b9165ac9922ae4f32da095ffd3c4e6872b45eded42926deea46818"},
+    {file = "Mako-1.2.4.tar.gz", hash = "sha256:d60a3903dc3bb01a18ad6a89cdbe2e4eadc69c0bc8ef1e3773ba53d44c3f7a34"},
 ]
 
 [package.dependencies]
@@ -2072,6 +2223,23 @@ socks = ["PySocks (>=1.5.6,!=1.5.7)"]
 use-chardet-on-py3 = ["chardet (>=3.0.2,<6)"]
 
 [[package]]
+name = "s3transfer"
+version = "0.7.0"
+description = "An Amazon S3 Transfer Manager"
+optional = false
+python-versions = ">= 3.7"
+files = [
+    {file = "s3transfer-0.7.0-py3-none-any.whl", hash = "sha256:10d6923c6359175f264811ef4bf6161a3156ce8e350e705396a7557d6293c33a"},
+    {file = "s3transfer-0.7.0.tar.gz", hash = "sha256:fd3889a66f5fe17299fe75b82eae6cf722554edca744ca5d5fe308b104883d2e"},
+]
+
+[package.dependencies]
+botocore = ">=1.12.36,<2.0a.0"
+
+[package.extras]
+crt = ["botocore[crt] (>=1.20.29,<2.0a.0)"]
+
+[[package]]
 name = "scikit-learn"
 version = "1.3.1"
 description = "A set of python modules for machine learning and data mining"
@@ -2833,4 +3001,4 @@ scikit-learn = ["scikit-learn"]
 [metadata]
 lock-version = "2.0"
 python-versions = "3.11.x"
-content-hash = "1ce17b25821bd0b6f24d2732bf63e44decd7eb9f2222a60ea9ea0c626b0b1db4"
+content-hash = "8e596743a0df04e65a41d9d0cdf15996ac67917e0d3418bb89acc7e956734df4"

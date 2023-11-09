@@ -17,6 +17,8 @@ torchsummary = "^1.5.1"
 catboost = "^1.2.2"
 tpot = "^0.12.1"
 mljar-supervised = "^1.1.1"
+optuna = "^3.4.0"
+autogluon-tabular = "^0.8.2"
 
 
 [tool.poetry.group.dev.dependencies]
