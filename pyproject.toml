@@ -18,6 +18,7 @@ catboost = "^1.2.2"
 tpot = "^0.12.1"
 optuna = "^3.4.0"
 autogluon-tabular = "^0.8.2"
+autogluon = "^0.8.2"
 
 
 [tool.poetry.group.dev.dependencies]
