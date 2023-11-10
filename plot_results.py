@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 # Load the datasets
 df1 = pd.read_csv('kaggle_submission_catboost_10.csv')
 # df2 = pd.read_csv('kaggle_submission_catboost_11.csv')
-df3 = pd.read_csv('combined_predictions_A_B_C.csv')
+df3 = pd.read_csv('kaggle_submission_catboost_15.csv')
 df4 = pd.read_csv('combined_predictions_10_11_12.csv')
-df5 = pd.read_csv('kaggle_submission_catboost_13.csv')
+df5 = pd.read_csv('kaggle_submission_catboost_16.csv')
 
 
 
@@ -18,9 +18,9 @@ df5 = pd.read_csv('kaggle_submission_catboost_13.csv')
 df_predictions = pd.DataFrame({
     'id': df1['id'],
     'Prediction 145': df1['prediction'],
-    'Prediction ensemble': df4['prediction'],
-    'Prediction long train': df5['prediction'],
-    'Prediction big ensemble': df3['prediction'],
+    # 'Prediction ensemble': df4['prediction'],
+    'Prediction hopeful': df5['prediction'],
+    'Prediction long train': df3['prediction']
 
 
 })
@@ -29,9 +29,9 @@ df_predictions = pd.DataFrame({
 plt.figure(figsize=(10, 6))
 
 plt.plot(df_predictions['id'], df_predictions['Prediction 145'], label='Prediction 145', alpha=0.8)
-plt.plot(df_predictions['id'], df_predictions['Prediction big ensemble'], label='Prediction big ensemble', alpha=0.8)
 plt.plot(df_predictions['id'], df_predictions['Prediction long train'], label='Prediction long train', alpha=0.8)
-plt.plot(df_predictions['id'], df_predictions['Prediction ensemble'], label='Prediction ensemble', alpha=0.8)
+plt.plot(df_predictions['id'], df_predictions['Prediction hopeful'], label='Prediction hopeful', alpha=0.8)
+# plt.plot(df_predictions['id'], df_predictions['Prediction ensemble'], label='Prediction ensemble', alpha=0.8)
 
 
 

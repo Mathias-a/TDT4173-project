@@ -16,7 +16,7 @@ df_average_first_720 = pd.DataFrame({
 
 df_average_middle_720 = pd.DataFrame({
     'id': df1['id'].iloc[720:1440],
-    'prediction': (df4['prediction'].iloc[720:1440] *0.25 + df3['prediction'].iloc[720:1440]*0.25 + df2['prediction'].iloc[720:1440]*0.5)
+    'prediction': (df4['prediction'].iloc[720:1440] *0.1 + df3['prediction'].iloc[720:1440]*0.1 + df2['prediction'].iloc[720:1440]*0.8)
 })
 # Keep the middle predictions from df1 as is
 df_average_last = pd.DataFrame({
@@ -29,4 +29,4 @@ df_average_last = pd.DataFrame({
 df_combined = pd.concat([df_average_first_720, df_average_middle_720, df_average_last], ignore_index=True)
 
 # Save the combined predictions to a new CSV file
-df_combined.to_csv('combined_predictions_A_B_C.csv', index=False)
+df_combined.to_csv('combined_predictions_A_B_C_weighted.csv', index=False)
