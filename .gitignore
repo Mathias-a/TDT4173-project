@@ -3,3 +3,4 @@
 # all files with .cbm extension
 *.cbm
 models/*
+autogluon_models/*

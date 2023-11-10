@@ -46,11 +46,6 @@ def feature_engineering(df_merged):
     return df_merged
 
 
-def manipulate_single_feature(df, feature_name):
-    # 1. Outlier Removal
-    # ... this function remains the same ...
-
-    return df
 
 
 # Usage example
