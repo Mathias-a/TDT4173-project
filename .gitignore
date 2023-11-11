@@ -4,3 +4,4 @@
 *.cbm
 models/*
 autogluon_models/*
+catboost_info/*
